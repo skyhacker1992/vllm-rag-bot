@@ -1,104 +1,105 @@
 # NAOFPA LLM Inference Platform
 
-Production-style **S.A.R.A.-like** GenAI platform demonstrating LLM serving, RAG, observability, and cloud-native deployment patterns aligned with enterprise ML platform engineering roles.
+A production-style GenAI platform for enterprise LLM serving, retrieval-augmented generation, observability, and cloud-native deployment.
 
-Built for **Naturally Artificial of Pennsylvania** — runnable locally on **RTX 3060 12GB**, deployable to **GKE + KServe**.
+Built for local validation on RTX 3060 and deployable to GKE + KServe with reusable infrastructure and security patterns.
 
-## What this demonstrates
+## Why it matters
 
-| Job requirement | Implementation in this repo |
-|-----------------|----------------------------|
-| **vLLM** | Primary inference server (`docker-compose.yml`, AWQ + prefix caching) |
-| **SGLang** | Optional profile `docker compose --profile sglang up` |
-| **Triton / TensorRT-LLM** | Reference docs + production path notes (`serving/triton`, `serving/tensorrt-llm`) |
-| **Quantization AWQ/GPTQ/FP8** | AWQ default; tuning notes in `serving/vllm/README.md` |
-| **Tensor parallelism** | `TENSOR_PARALLEL_SIZE` env; KServe manifest uses 2 GPUs |
-| **Benchmarking** | `benchmarks/bench_openai.py`, `compare_backends.sh` |
-| **RAG / GenAI** | FastAPI gateway + Chroma + HuggingFace embeddings |
-| **Kubernetes / KServe** | `k8s/kserve/inferenceservice-vllm.yaml` |
-| **Helm** | `helm/naofpa-llm-platform/` |
-| **Terraform / GKE** | `terraform/gke/main.tf` (GPU node pool, VPC, workload identity) |
-| **Vault secrets** | `k8s/vault/agent-inject.yaml` |
-| **Prometheus / Grafana** | `observability/` + `/metrics` on gateway |
-| **JWT auth (Reports Hub)** | Same `REPORTS_SECRET_KEY` pattern as S.A.R.A. |
+- Demonstrates a complete end-to-end GenAI platform stack in one repo.
+- Validates 12GB consumer GPU inference with AWQ and modern model routing.
+- Shows secure gateway architecture with JWT auth, RAG, metrics, and cloud deploy.
+- Provides reusable reference patterns for ML platform engineering teams.
+
+## What this repo includes
+
+- **LLM inference**: vLLM as the primary OpenAI-compatible backend
+- **RAG**: Chroma vector store with HuggingFace embeddings
+- **Observability**: Prometheus metrics, Grafana dashboards, latency, and error tracking
+- **Deployment**: Docker Compose, Helm chart, KServe manifest, Terraform GKE module
+- **Security**: JWT auth flow and Vault agent secret injection
+- **Benchmarks**: backend comparison and performance testing scripts
+- **Production notes**: Triton, TensorRT-LLM, AWQ/FP8 quantization guidance
 
 ## Architecture
 
-```
-User (Reports Hub JWT) → Gateway :7862 → vLLM :8000 (OpenAI API)
-                              ↓
-                         Chroma RAG :8100
-                              ↓
-                    Prometheus :9090 → Grafana :3002
-```
+User → Gateway (:7862) → Inference backend (vLLM / SGLang) + Chroma RAG → Metrics
 
-## Quick start (local, RTX 3060)
+- Gateway proxies chat requests to vLLM on `:8000`
+- RAG uses Chroma on `:8100`
+- Prometheus scrapes `/metrics` and exposes dashboards via Grafana
+
+## Quick start
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and set `REPORTS_SECRET_KEY`.
+3. Make scripts executable:
+   ```bash
+   chmod +x deploy.sh benchmarks/compare_backends.sh
+   ```
+4. Start locally:
+   ```bash
+   ./deploy.sh
+   ```
+5. Open the gateway UI:
+   ```text
+   http://127.0.0.1:7862/?token=YOUR_JWT
+   ```
+
+> First startup downloads `Qwen/Qwen2.5-3B-Instruct-AWQ` (~2GB), so allow a few minutes.
+
+## Core commands
+
+- Run benchmark comparison:
+  ```bash
+  ./benchmarks/compare_backends.sh
+  ```
+- Switch to SGLang backend:
+  ```bash
+  # set INFERENCE_BACKEND=sglang in .env
+  docker compose --profile sglang -p naofpa-vllmproj up -d sglang
+  docker compose -p naofpa-vllmproj up -d --force-recreate gateway
+  ```
+
+## Kubernetes / GKE deploy
 
 ```bash
-cd ~/workingDIR/naofpa-vllmproj
-cp .env.example .env
-# Edit .env — set REPORTS_SECRET_KEY to match Reports Hub
-chmod +x deploy.sh benchmarks/compare_backends.sh
-./deploy.sh
-```
-
-First vLLM start downloads `Qwen/Qwen2.5-3B-Instruct-AWQ` (~2GB). Allow several minutes.
-
-Open from Reports Hub with token:
-`http://127.0.0.1:7862/?token=YOUR_JWT`
-
-## Benchmark
-
-```bash
-./benchmarks/compare_backends.sh
-```
-
-## Switch to SGLang backend
-
-```bash
-# In .env: INFERENCE_BACKEND=sglang
-docker compose --profile sglang -p naofpa-vllmproj up -d sglang
-docker compose -p naofpa-vllmproj up -d --force-recreate gateway
-```
-
-## Kubernetes / GKE
-
-```bash
-# Terraform GPU cluster
-cd terraform/gke && terraform init && terraform apply -var=project_id=YOUR_GCP_PROJECT
-
-# KServe InferenceService
+cd terraform/gke
+terraform init
+terraform apply -var=project_id=YOUR_GCP_PROJECT
 kubectl apply -f k8s/kserve/inferenceservice-vllm.yaml
-
-# Helm
 helm install naofpa helm/naofpa-llm-platform -n naofpa-llm --create-namespace
 ```
 
-## API
+## API endpoints
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /?token=` | Chat UI |
-| `POST /v1/chat?token=` | RAG chat JSON `{message, use_rag}` |
-| `POST /v1/ingest?token=` | Add text to RAG index |
-| `GET /health` | Backend + model status |
-| `GET /metrics` | Prometheus metrics |
+- `GET /?token=` — chat UI
+- `POST /v1/chat?token=` — chat request JSON `{message, use_rag}`
+- `POST /v1/ingest?token=` — add text to RAG index
+- `GET /health` — status check
+- `GET /metrics` — Prometheus metrics
 
 ## Ports
 
-| Service | Port |
-|---------|------|
-| Gateway | 7862 |
-| vLLM | 8000 |
-| SGLang | 30000 |
-| Chroma | 8100 |
-| Prometheus | 9090 |
-| Grafana | 3002 |
+- Gateway: `7862`
+- vLLM: `8000`
+- Chroma: `8100`
+- Prometheus: `9090`
+- Grafana: `3002`
+- SGLang: `30000`
 
-## Interview talking points
+## Impact summary
 
-- **Continuous batching**: vLLM PagedAttention + dynamic batching vs static batching
-- **Prefix caching**: RAG system prompts share KV blocks across requests
-- **Quantization tradeoffs**: AWQ on 12GB consumer GPU; FP8 on datacenter TensorRT-LLM
-- **SRE**: gateway exposes request counters, latency histograms, error rates
-- **Multi-cloud**: Terraform GKE module; patterns portable to Azure AKS + GPU SKUs
+- Enables rapid prototyping of secure, observable GenAI services on constrained GPU hardware.
+- Reduces deployment friction by unifying local compose, Kubernetes, Helm, and Terraform workflows.
+- Provides a reusable reference for teams adopting RAG, inference routing, and production observability.
+- Helps teams understand performance, quantization, caching, and deployment tradeoffs.
+
+## Notes
+
+- `serving/vllm/README.md` contains tuning and quantization details.
+- `k8s/kserve/inferenceservice-vllm.yaml` demonstrates scalable GPU inference with KServe.
+- `helm/naofpa-llm-platform/` contains the platform chart for production-style deployment.

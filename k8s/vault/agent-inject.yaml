@@ -1,0 +1,33 @@
+# HashiCorp Vault Agent Injector — inject REPORTS_SECRET_KEY into gateway pods
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: naofpa-gateway
+  namespace: naofpa-llm
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: naofpa-gateway
+  template:
+    metadata:
+      labels:
+        app: naofpa-gateway
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: naofpa-llm
+        vault.hashicorp.com/agent-inject-secret-reports: "kv/data/naofpa/reports"
+        vault.hashicorp.com/agent-inject-template-reports: |
+          {{- with secret "kv/data/naofpa/reports" -}}
+          export REPORTS_SECRET_KEY="{{ .Data.data.REPORTS_SECRET_KEY }}"
+          {{- end }}
+    spec:
+      serviceAccountName: naofpa-gateway
+      containers:
+        - name: gateway
+          image: naofpa/gateway:latest
+          ports:
+            - containerPort: 7862
+          env:
+            - name: VLLM_BASE_URL
+              value: http://naofpa-vllm-predictor.naofpa-llm.svc:8000/v1

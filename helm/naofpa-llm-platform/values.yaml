@@ -1,0 +1,32 @@
+gateway:
+  image: naofpa/gateway:latest
+  replicas: 2
+  port: 7862
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+vllm:
+  enabled: true
+  image: vllm/vllm-openai:latest
+  model: Qwen/Qwen2.5-3B-Instruct-AWQ
+  quantization: awq
+  tensorParallelSize: 2
+  gpuCount: 2
+  prefixCaching: true
+
+sglang:
+  enabled: false
+
+chroma:
+  enabled: true
+  port: 8000
+
+observability:
+  prometheus: true
+  grafana: true
+
+vault:
+  enabled: true
+  role: naofpa-llm

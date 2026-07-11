@@ -1,0 +1,32 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: naofpa-vllm
+  namespace: naofpa-llm
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+spec:
+  predictor:
+    containers:
+      - name: vllm
+        image: vllm/vllm-openai:latest
+        args:
+          - --model
+          - Qwen/Qwen2.5-3B-Instruct-AWQ
+          - --quantization
+          - awq
+          - --tensor-parallel-size
+          - "2"   # scale on multi-GPU GKE node pool
+          - --enable-prefix-caching
+          - --port
+          - "8000"
+        resources:
+          limits:
+            nvidia.com/gpu: "2"
+          requests:
+            nvidia.com/gpu: "2"
+        ports:
+          - containerPort: 8000
+            protocol: TCP

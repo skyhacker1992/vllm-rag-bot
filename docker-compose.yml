@@ -1,0 +1,103 @@
+name: naofpa-vllmproj
+
+services:
+  # Primary inference: vLLM with AWQ quantization (fits RTX 3060 12GB)
+  vllm:
+    image: vllm/vllm-openai:v0.8.4
+    container_name: naofpa-vllm
+    restart: unless-stopped
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: >
+      --model ${LLM_MODEL:-Qwen/Qwen2.5-3B-Instruct-AWQ}
+      --quantization awq
+      --dtype auto
+      --max-model-len 4096
+      --gpu-memory-utilization 0.90
+      --tensor-parallel-size ${TENSOR_PARALLEL_SIZE:-1}
+      --enable-prefix-caching
+      --port 8001
+      --host 0.0.0.0
+
+  # Alternate backend (enable with: docker compose --profile sglang up -d)
+  sglang:
+    profiles: [sglang]
+    image: lmsysorg/sglang:latest
+    container_name: naofpa-sglang
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: >
+      python3 -m sglang.launch_server
+      --model-path ${LLM_MODEL:-Qwen/Qwen2.5-3B-Instruct-AWQ}
+      --port 30000
+      --host 0.0.0.0
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: naofpa-chroma
+    restart: unless-stopped
+    ports:
+      - "8100:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: naofpa-gateway
+    restart: unless-stopped
+    depends_on:
+      - chroma
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      - VLLM_BASE_URL=http://127.0.0.1:8001/v1
+      - SGLANG_BASE_URL=http://127.0.0.1:30000/v1
+      - CHROMA_HOST=127.0.0.1
+      - CHROMA_PORT=8100
+      - INFERENCE_BACKEND=${INFERENCE_BACKEND:-vllm}
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: naofpa-prometheus
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.listen-address=0.0.0.0:9190
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: naofpa-grafana
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=3002
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  chroma_data:
+  grafana_data:

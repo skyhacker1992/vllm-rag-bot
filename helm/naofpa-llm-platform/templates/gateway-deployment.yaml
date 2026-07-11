@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-gateway
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-gateway
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: {{ .Values.gateway.image }}
+          ports:
+            - containerPort: {{ .Values.gateway.port }}
+          env:
+            - name: VLLM_BASE_URL
+              value: http://{{ .Release.Name }}-vllm:8000/v1
+            - name: INFERENCE_BACKEND
+              value: vllm
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}

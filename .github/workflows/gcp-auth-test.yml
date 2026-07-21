@@ -1,0 +1,32 @@
+name: Test GCP Authentication
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # Required for OIDC
+
+jobs:
+  auth-test:
+    runs-on: ubuntu-latest
+
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}   # Add this in repo variables
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github/providers/github-provider"  # we'll set this up next
+          service_account: "github-actions@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+
+      - name: Test authentication
+        run: |
+          echo "✅ Successfully authenticated to GCP!"
+          gcloud auth list
+          gcloud projects describe ${{ env.GCP_PROJECT_ID }}
+          gcloud compute zones list --limit=3

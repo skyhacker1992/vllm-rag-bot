@@ -33,8 +33,8 @@ resource "google_container_cluster" "vllm_cluster" {
 }
 
 # Node pool optimized for VLLM (you can adjust machine type later)
-resource "google_container_node_pool" "default_pool" {
-  name       = "default-pool"
+resource "google_container_node_pool" "gpu_pool" {
+  name       = "gpu_pool"
   location   = var.region
   cluster    = google_container_cluster.vllm_cluster.name
   node_count = 1

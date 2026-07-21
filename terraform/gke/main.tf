@@ -30,7 +30,7 @@ resource "google_container_cluster" "vllm_cluster" {
 
   # Critical: Override default disk size to stay under quota
   node_config {
-    disk_size_gb = 10
+    disk_size_gb = 20
   }
 
   workload_identity_config {

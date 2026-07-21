@@ -13,7 +13,7 @@ jobs:
 
     env:
       GCP_PROJECT_ID: vllm-sara
-      GCP_REGION: us-central1   # change if you want
+      GCP_REGION: us-east1   # change if you want
 
     steps:
       - name: Checkout

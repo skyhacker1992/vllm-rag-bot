@@ -1,5 +1,10 @@
 # terraform/gke/main.tf
-
+terraform {
+  backend "gcs" {
+    bucket = "vllm-sara-tf-state"   # we'll create this
+    prefix = "gke/terraform"
+  }
+}
 terraform {
   required_providers {
     google = {

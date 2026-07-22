@@ -26,6 +26,8 @@ spec:
               value: "8000"
             - name: INFERENCE_BACKEND
               value: "vllm"
+            - name: DISABLE_AUTH
+              value: "true"
             # We'll point this to a real vLLM later
             - name: VLLM_BASE_URL
               value: "http://vllm:8000/v1"

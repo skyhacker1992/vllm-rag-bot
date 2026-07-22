@@ -1,32 +1,35 @@
+namespace: naofpa-dev
+
 gateway:
-  image: naofpa/gateway:latest
-  replicas: 2
+  enabled: true
+  image: us-east1-docker.pkg.dev/vllm-sara/vllm-rag-bot/gateway:latest
+  replicas: 1
   port: 7862
   resources:
     requests:
-      cpu: 500m
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
       memory: 1Gi
-
-vllm:
-  enabled: true
-  image: vllm/vllm-openai:latest
-  model: Qwen/Qwen2.5-3B-Instruct-AWQ
-  quantization: awq
-  tensorParallelSize: 2
-  gpuCount: 2
-  prefixCaching: true
-
-sglang:
-  enabled: false
 
 chroma:
   enabled: true
+  image: chromadb/chroma:latest
   port: 8000
+  storage: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+# We'll leave these for later
+vllm:
+  enabled: false
 
 observability:
-  prometheus: true
-  grafana: true
-
-vault:
-  enabled: true
-  role: naofpa-llm
+  prometheus: false
+  grafana: false

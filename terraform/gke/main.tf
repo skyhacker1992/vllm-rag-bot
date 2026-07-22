@@ -39,20 +39,38 @@ resource "google_container_cluster" "vllm_cluster" {
 }
 
 # Your main node pool (1 node per zone if regional)
-resource "google_container_node_pool" "default_pool" {
-  name       = "default-pool"
+resource "google_container_node_pool" "gpu_pool" {
+  name       = "gpu-pool"
   location   = var.region
   cluster    = google_container_cluster.vllm_cluster.name
   node_count = 1
 
   node_config {
-    machine_type = "n1-standard-4"
+    machine_type = "g2-standard-4"   # 1x L4 GPU (good starting point)
     disk_size_gb = 50
+
+    guest_accelerator {
+      type  = "nvidia-l4"
+      count = 1
+    }
+
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
+
     workload_metadata_config {
       mode = "GKE_METADATA"
+    }
+
+    # Allow the GPU driver to be installed
+    labels = {
+      "cloud.google.com/gke-accelerator" = "nvidia-l4"
+    }
+
+    taint {
+      key    = "nvidia.com/gpu"
+      value  = "present"
+      effect = "NO_SCHEDULE"
     }
   }
 }

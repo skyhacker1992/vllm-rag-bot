@@ -37,14 +37,20 @@ jobs:
 
       - name: Install gke-gcloud-auth-plugin
         run: |
-          gcloud components install gke-gcloud-auth-plugin --quiet
-          echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+          gcloud components install gke-gcloud-auth-plugin --quiet || true
+          export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
 
       - name: Get GKE credentials
         run: |
           gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
             --region ${{ env.GKE_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
+
+      - name: Verify plugin
+        run: |
+          which gke-gcloud-auth-plugin || echo "Plugin still missing"
+          gke-gcloud-auth-plugin --version || true
 
       - name: Install Helm
         uses: azure/setup-helm@v4

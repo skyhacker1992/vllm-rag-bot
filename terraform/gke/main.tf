@@ -30,7 +30,7 @@ resource "google_container_cluster" "vllm_cluster" {
 
   # Critical: Override default disk size to stay under quota
   node_config {
-    disk_size_gb = 20
+    disk_size_gb = 50
   }
 
   workload_identity_config {
@@ -81,5 +81,5 @@ variable "project_id" {
 
 variable "region" {
   type    = string
-  default = "us-east1"
+  default = "us-east1-b"
 }

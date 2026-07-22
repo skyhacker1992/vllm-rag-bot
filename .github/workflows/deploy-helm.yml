@@ -19,7 +19,7 @@ jobs:
     env:
       GCP_PROJECT_ID: vllm-sara
       GKE_CLUSTER: vllm-cluster
-      GKE_REGION: us-east1
+      GKE_REGION: us-east1-b
       NAMESPACE: naofpa-dev
 
     steps:

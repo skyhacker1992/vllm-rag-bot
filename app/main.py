@@ -37,6 +37,10 @@ async def startup():
 
 
 def _require_user(request: Request) -> str:
+    # Temporary bypass for dev / testing
+    if os.getenv("DISABLE_AUTH", "false").lower() in ("true", "1", "yes"):
+        return "dev-user"
+
     token = request.query_params.get("token") or request.headers.get("X-Auth-Token", "")
     user = get_username_from_token(token)
     if not user:

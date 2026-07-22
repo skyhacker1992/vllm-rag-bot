@@ -1,0 +1,60 @@
+{{- if .Values.chroma.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chroma
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chroma
+  template:
+    metadata:
+      labels:
+        app: chroma
+    spec:
+      containers:
+        - name: chroma
+          image: {{ .Values.chroma.image }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: IS_PERSISTENT
+              value: "TRUE"
+            - name: ANONYMIZED_TELEMETRY
+              value: "FALSE"
+          volumeMounts:
+            - name: chroma-data
+              mountPath: /chroma/chroma
+          resources:
+            {{- toYaml .Values.chroma.resources | nindent 12 }}
+      volumes:
+        - name: chroma-data
+          persistentVolumeClaim:
+            claimName: chroma-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: chroma-pvc
+  namespace: {{ .Values.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.chroma.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chroma
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: chroma
+  ports:
+    - port: 8000
+      targetPort: 8000
+{{- end }}

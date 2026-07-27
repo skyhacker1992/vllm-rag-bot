@@ -58,16 +58,16 @@ jobs:
       # Security Scanning (Trivy)
       # -----------------------------
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: ${{ env.IMAGE_URI }}
           format: 'table'
-          exit-code: '1'          # fail the job on findings
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
 
-      - name: Run Trivy (SARIF upload for GitHub Security tab)
-        uses: aquasecurity/trivy-action@0.28.0
+      - name: Run Trivy (SARIF for GitHub Security)
+        uses: aquasecurity/trivy-action@0.35.0
         if: always()
         with:
           image-ref: ${{ env.IMAGE_URI }}
@@ -75,7 +75,7 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
-      - name: Upload Trivy scan results to GitHub Security
+      - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:

@@ -5,7 +5,6 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies only in this stage
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -14,13 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
-# Create a virtual environment and install dependencies into it
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-RUN pip install --no-cache-dir --upgrade pip wheel jaraco.context \
+# Force modern packaging stack first (setuptools 82+ vendors fixed jaraco.context)
+RUN pip install --no-cache-dir --upgrade pip "setuptools>=82.0.0" "wheel>=0.46.2" \
     && pip install --no-cache-dir -r requirements.txt
-
 
 # -----------------------------
 # Stage 2: Runtime
@@ -29,21 +27,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Create a non-root user
 RUN useradd --create-home --shell /bin/bash appuser
 
-# Copy only the virtual environment from the builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy application code
 COPY app ./app
 COPY data/docs ./data/docs
 
 ENV RAG_DOCS_PATH=/app/data/docs
 ENV PYTHONUNBUFFERED=1
 
-# Switch to non-root user
 USER appuser
 
 EXPOSE 7862

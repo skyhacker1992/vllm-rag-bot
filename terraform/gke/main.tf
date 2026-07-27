@@ -1,15 +1,25 @@
 # terraform/gke/main.tf
+
 terraform {
   backend "gcs" {
-    bucket = "vllm-sara-tf-state"   # we'll create this
+    bucket = "vllm-sara-tf-state"
     prefix = "gke/terraform"
   }
 }
+
 terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
       version = "~> 6.0"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
     }
   }
 }
@@ -19,10 +29,26 @@ provider "google" {
   region  = var.region
 }
 
+data "google_client_config" "default" {}
+
+provider "helm" {
+  kubernetes {
+    host                   = "https://${google_container_cluster.vllm_cluster.endpoint}"
+    token                  = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(google_container_cluster.vllm_cluster.master_auth[0].cluster_ca_certificate)
+  }
+}
+
+provider "kubernetes" {
+  host                   = "https://${google_container_cluster.vllm_cluster.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(google_container_cluster.vllm_cluster.master_auth[0].cluster_ca_certificate)
+}
+
 resource "google_container_cluster" "vllm_cluster" {
-  name     = "vllm-cluster"
-  location = var.region
-  deletion_protection = false
+  name                     = "vllm-cluster"
+  location                 = var.region
+  deletion_protection      = false
   remove_default_node_pool = true
   initial_node_count       = 1
 
@@ -40,7 +66,7 @@ resource "google_container_node_pool" "default_pool" {
   node_count = 1
 
   node_config {
-    machine_type = "n1-standard-4"   # Change to g2-standard or a2 for real GPUs later
+    machine_type = "n1-standard-4" # Change to g2-standard or a2 for real GPUs later
     disk_size_gb = 50
 
     oauth_scopes = [
@@ -51,6 +77,43 @@ resource "google_container_node_pool" "default_pool" {
       mode = "GKE_METADATA"
     }
   }
+}
+
+# -----------------------------
+# Argo CD
+# -----------------------------
+
+resource "kubernetes_namespace" "argocd" {
+  metadata {
+    name = "argocd"
+  }
+
+  depends_on = [
+    google_container_node_pool.default_pool
+  ]
+}
+
+resource "helm_release" "argocd" {
+  name       = "argocd"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-cd"
+  version    = "7.7.10"
+  namespace  = kubernetes_namespace.argocd.metadata[0].name
+
+  values = [
+    <<-EOT
+    server:
+      service:
+        type: LoadBalancer
+    configs:
+      params:
+        server.insecure: true
+    EOT
+  ]
+
+  depends_on = [
+    kubernetes_namespace.argocd
+  ]
 }
 
 # Variables

@@ -10,3 +10,5 @@ langchain-text-splitters
 chromadb
 sentence-transformers
 pydantic
+wheel>=0.46.2
+jaraco.context>=6.1.0

@@ -36,4 +36,5 @@ jobs:
           ruff format --check .
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: |
+          PYTHONPATH=. pytest tests/ -v --tb=short

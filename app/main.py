@@ -3,13 +3,13 @@ import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
-from pydantic import BaseModel
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+from pydantic import BaseModel
 
 from app.auth import get_username_from_token
 from app.backends import backend_status, chat_completion, stream_chat
 from app.config import INFERENCE_BACKEND, LLM_MODEL, QUANTIZATION
-from app.rag import initialize_rag, ingest_text, retrieve_context
+from app.rag import ingest_text, initialize_rag, retrieve_context
 
 # Prometheus metrics (SRE / observability)
 REQ_COUNTER = Counter("naofpa_gateway_requests_total", "Gateway requests", ["endpoint", "backend"])

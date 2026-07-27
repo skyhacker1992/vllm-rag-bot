@@ -1,11 +1,17 @@
 """OpenAI-compatible clients for vLLM and SGLang inference servers."""
 
 import time
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import httpx
 
-from app.config import INFERENCE_BACKEND, LLM_MODEL, QUANTIZATION, TENSOR_PARALLEL_SIZE, inference_base_url
+from app.config import (
+    INFERENCE_BACKEND,
+    LLM_MODEL,
+    QUANTIZATION,
+    TENSOR_PARALLEL_SIZE,
+    inference_base_url,
+)
 
 METRICS = {
     "requests_total": 0,
@@ -68,6 +74,7 @@ async def stream_chat(messages: list[dict], temperature: float = 0.7, max_tokens
                     if chunk == "[DONE]":
                         break
                     import json
+
                     data = json.loads(chunk)
                     delta = data["choices"][0].get("delta", {}).get("content", "")
                     if delta:

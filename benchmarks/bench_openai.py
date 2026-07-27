@@ -47,7 +47,7 @@ def main():
     args = p.parse_args()
 
     results = []
-    for r in range(args.rounds):
+    for _ in range(args.rounds):
         for prompt in PROMPTS:
             try:
                 results.append(one_request(args.base_url, args.model, prompt))
@@ -70,6 +70,7 @@ def main():
     print(json.dumps(summary, indent=2))
     out = f"benchmarks/results/{int(time.time())}.json"
     import os
+
     os.makedirs("benchmarks/results", exist_ok=True)
     with open(out, "w") as f:
         json.dump({"summary": summary, "samples": results}, f, indent=2)

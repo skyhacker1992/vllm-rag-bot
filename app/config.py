@@ -15,5 +15,6 @@ CHROMA_HOST = os.getenv("CHROMA_HOST", "127.0.0.1")
 CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8100"))
 RAG_DOCS_PATH = os.getenv("RAG_DOCS_PATH", "./data/docs")
 
+
 def inference_base_url() -> str:
     return SGLANG_BASE_URL if INFERENCE_BACKEND == "sglang" else VLLM_BASE_URL

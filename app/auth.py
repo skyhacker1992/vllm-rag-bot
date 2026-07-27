@@ -1,4 +1,4 @@
-from jose import jwt, JWTError
+from jose import JWTError, jwt
 
 from app.config import ALGORITHM, SECRET_KEY
 

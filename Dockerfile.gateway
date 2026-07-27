@@ -27,6 +27,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Remove vulnerable system packaging tools that ship with the base image
+RUN pip uninstall -y setuptools wheel \
+    && rm -rf /usr/local/lib/python3.11/site-packages/setuptools* \
+              /usr/local/lib/python3.11/site-packages/wheel* \
+              /usr/local/lib/python3.11/site-packages/pkg_resources* \
+    || true
+
 RUN useradd --create-home --shell /bin/bash appuser
 
 COPY --from=builder /opt/venv /opt/venv

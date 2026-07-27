@@ -41,7 +41,7 @@ resource "google_container_node_pool" "default_pool" {
 
   node_config {
     machine_type = "n1-standard-4"   # Change to g2-standard or a2 for real GPUs later
-    disk_size_gb = 20
+    disk_size_gb = 50
 
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
